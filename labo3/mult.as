@@ -28,51 +28,44 @@
 
 
 
-	Auteur:
+	Auteur: Gabriel Dumont-Hétu et Bruno Pouliot
 ***********************************************************************/
 MultMatVec:
 		SAVE
-		section ".text"
-				INDEX_STEP=#4
+		mov		x20, x0				//Matrice
+		mov		x21, x1				//Vecteur
+		mov		x22, x2				//Vecteur Résultat
+		mov		x23, x3				//nbRangées
+		mov		x24, x4				//nbColonnes
 
-MultMatVec_init:
-		mov		x19, x0						// x19 <= Matrice address
-		mov		x20, x1						// x20 <= Vector address
-		mov		x21, x2						// x21 <= vResult address
-		mov		x22, x3						// x22 <= NbrLines
-		mov		x23, x4						// x23 <= NbrColumn
+		mov		x19, #0				//Index de la matrice
+		mov		x26, #0				//Index du vecteur résultat
+		mov		x27, #0				//Index du vecteur
 
-		mov		x24, #0						// x24 <= MatriceCurrentIndex
-		mov		x25, #0						// x25 <= VectorCurrentIndex
-		mov		x26, #0						// x26 <= Result index
 
-MultMatVec_LOOP_START:
 
-		mov		x7, #1						// x7 <= init
-		add		x7, x7, x24					// x7 <= x7 + MatriceCurrentIndex
-		mul		x7, x7, INDEX_STEP			// Matrice NEXT index
-		ldrsw	w26, [x19], x7				// w26 <= LOAD Matrice value 	| Matrice_address ++
-
-		mov		x6, #1						// x6 <= init
-		add		x6, x6, x25					// x6 <= x6 + VectorCurrentIndex
-		mul		x6, x6, INDEX_STEP			// Matrice NEXT index
-		ldrsw	w27, [x20], x25				// w26 <= LOAD Vector value		| Vector_address++
-
-		add		x24, #1
-		add		x25, #1						
+MultMatVec_0100:
+		mov		x28, #0				// resulat de la cellule courante
+		cmp		x26, x23, lsl #2	//Si x26 == 4*nbRangées
+		b.eq	MultMatVec_0400		//Alors, le calcul est fini
+MultMatVec_0200:
+		ldrsw	x9, [x21, x27]		//Élément du vecteur
+		add 	x27, x27, #4
+		ldrsw	x10, [x20, x19]		//Élément de la matrice
+		add		x19, x19, #4
+		madd	x28, x9, x10, x28	//x28 += élément du vecteur*élément de la matrice
+		cmp		x27, x24, lsl #2	//Tant que l'index du vecteur est plus petit que le nombre d'éléments du vecteur
+		b.ne	MultMatVec_0200		//On continue
+MultMatVec_0300:
+		str		w28, [x22, x26]		//Sinon, on le range dans le vecteur résultat
+		add		x26, x26, #4
+		mov		x27, #0				//On met l'index du vecteur à 0
+		b		MultMatVec_0100		//Et on passe au prochain
+MultMatVec_0400:
+		//TODO Afficher le vecteur résultat qui est dans x22
 		
-		cpm		x25, x22					// VectorCurrentIndex - NbrLines
-		b.ge	MultMatVec_switchCol		// if( VectorCurrentIndex >= NbrLines ) GOTO MultMatVec_switchCol
-
-MultMatVec_switchCol:
-		mul		x7, x22, x23				// x7 <= NbrLines X NbrColumn
-		mov		x25, #0						// VectorCurrentIndex = 0
-		add		x24, x24, #1				// x24 <= MatriceCurrentIndex
-		cpm		x24, x7
-		b.ge	MultMatVec_LOOP_END			// END LOOP
 
 
-MultMatVec_LOOP_END:
 
 		RESTORE
 		ret
